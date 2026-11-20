@@ -1,0 +1,1537 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pinduoduo Калькулятор — Карго vs Прямая доставка (НДС 16%)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#fff1f2',
+              100: '#ffe4e6',
+              500: '#f43f5e',
+              600: '#e11d48',
+              700: '#be123c',
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    /* Убираем стрелки у числовых инпутов для чистого UI */
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type="number"] {
+      -moz-appearance: textfield;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen font-sans antialiased transition-colors duration-200 selection:bg-rose-500 selection:text-white">
+
+  <!-- Уведомление (Toast) вместо alert() -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+    <div class="bg-slate-900 dark:bg-slate-800 text-white border border-slate-700/80 px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 text-sm font-medium">
+      <span id="toast-icon" class="text-emerald-400">✓</span>
+      <span id="toast-msg">Настройки сохранены</span>
+    </div>
+  </div>
+
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+    
+    <!-- Шапка приложения -->
+    <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-slate-800/80">
+      <div class="flex items-center gap-3.5">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-rose-500 to-orange-500 flex items-center justify-center text-white shadow-lg shadow-rose-500/20 shrink-0">
+          <!-- Иконка посылки / калькулятора -->
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-xl sm:text-2xl font-bold tracking-tight">Pinduoduo Калькулятор</h1>
+          <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Сравнение Карго и прямой бесплатной доставки (НДС 16%) для РК</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2.5 self-start sm:self-auto">
+        <!-- Статус курсов -->
+        <div id="rate-status-badge" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-200/70 dark:bg-slate-900 border border-slate-300/70 dark:border-slate-800">
+          <span id="rate-status-dot" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+          <span id="rate-status-text">Загрузка курсов...</span>
+        </div>
+
+        <!-- Кнопка переключения темы -->
+        <button id="theme-toggle" type="button" title="Переключить тему" class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+          <svg id="icon-sun" class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+          <svg id="icon-moon" class="w-5 h-5 block dark:hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Основная рабочая область (одноколоночная с акцентом на быстрый расчёт) -->
+    <main class="mt-6 space-y-6">
+      
+      <!-- 1. Ввод параметров товара (Цена и Вес) -->
+      <section class="bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-base font-semibold flex items-center gap-2">
+            <span class="w-1.5 h-5 rounded-full bg-rose-500"></span>
+            Параметры товара
+          </h2>
+          <button id="clear-inputs-btn" type="button" class="text-xs font-medium text-slate-400 hover:text-rose-500 transition-colors">
+            Очистить поля
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <!-- Цена в юанях -->
+          <div>
+            <label for="input-price-cny" class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
+              Цена товара на Pinduoduo (Юани)
+            </label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 font-semibold text-base select-none">¥</span>
+              <input
+                id="input-price-cny"
+                type="number"
+                inputmode="decimal"
+                min="0"
+                step="0.01"
+                value=""
+                placeholder="Введите цену в юанях, например 100"
+                class="w-full pl-9 pr-14 py-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 text-base sm:text-lg font-bold placeholder:font-normal placeholder:text-sm placeholder:text-slate-400/80 focus:outline-none focus:ring-2 focus:ring-rose-500/40 focus:border-rose-500 transition-all"
+              />
+              <span class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-xs font-semibold text-slate-400 select-none">CNY</span>
+            </div>
+            <!-- Быстрые пресеты цен -->
+            <div class="flex flex-wrap gap-1.5 mt-2.5">
+              <button type="button" data-price="25" class="quick-price px-2.5 py-1 text-xs rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-rose-500/10 hover:text-rose-500 text-slate-600 dark:text-slate-300 transition-colors">25 ¥</button>
+              <button type="button" data-price="50" class="quick-price px-2.5 py-1 text-xs rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-rose-500/10 hover:text-rose-500 text-slate-600 dark:text-slate-300 transition-colors">50 ¥</button>
+              <button type="button" data-price="100" class="quick-price px-2.5 py-1 text-xs rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-rose-500/10 hover:text-rose-500 text-slate-600 dark:text-slate-300 transition-colors">100 ¥</button>
+              <button type="button" data-price="250" class="quick-price px-2.5 py-1 text-xs rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-rose-500/10 hover:text-rose-500 text-slate-600 dark:text-slate-300 transition-colors">250 ¥</button>
+              <button type="button" data-price="500" class="quick-price px-2.5 py-1 text-xs rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-rose-500/10 hover:text-rose-500 text-slate-600 dark:text-slate-300 transition-colors">500 ¥</button>
+            </div>
+          </div>
+
+          <!-- Примерный вес в граммах -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label for="input-weight-g" class="block text-xs font-medium text-slate-600 dark:text-slate-400">
+                Примерный вес посылки (в граммах)
+              </label>
+              <span id="weight-rounded-pill" class="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                Учётный вес: 0 г
+              </span>
+            </div>
+            <div class="relative">
+              <input
+                id="input-weight-g"
+                type="number"
+                inputmode="numeric"
+                min="0"
+                step="1"
+                value=""
+                placeholder="Введите вес в граммах, например 450"
+                class="w-full pl-3.5 pr-16 py-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 text-base sm:text-lg font-bold placeholder:font-normal placeholder:text-sm placeholder:text-slate-400/80 focus:outline-none focus:ring-2 focus:ring-rose-500/40 focus:border-rose-500 transition-all"
+              />
+              <span class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-xs font-semibold text-slate-400 select-none">грамм</span>
+            </div>
+            <!-- Быстрые пресеты веса (базовые 5 значений) -->
+            <div class="flex flex-wrap gap-1.5 mt-2.5">
+              <button type="button" data-weight="100" class="quick-weight px-2.5 py-1 text-xs rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-indigo-500/10 hover:text-indigo-400 text-slate-600 dark:text-slate-300 transition-colors">100 г</button>
+              <button type="button" data-weight="300" class="quick-weight px-2.5 py-1 text-xs rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-indigo-500/10 hover:text-indigo-400 text-slate-600 dark:text-slate-300 transition-colors">300 г</button>
+              <button type="button" data-weight="500" class="quick-weight px-2.5 py-1 text-xs rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-indigo-500/10 hover:text-indigo-400 text-slate-600 dark:text-slate-300 transition-colors">500 г</button>
+              <button type="button" data-weight="1000" class="quick-weight px-2.5 py-1 text-xs rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-indigo-500/10 hover:text-indigo-400 text-slate-600 dark:text-slate-300 transition-colors">1 кг</button>
+              <button type="button" data-weight="2500" class="quick-weight px-2.5 py-1 text-xs rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-indigo-500/10 hover:text-indigo-400 text-slate-600 dark:text-slate-300 transition-colors">2.5 кг</button>
+              <button type="button" data-weight="5000" class="quick-weight px-2.5 py-1 text-xs rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-indigo-500/10 hover:text-indigo-400 text-slate-600 dark:text-slate-300 transition-colors">5 кг</button>
+              <button type="button" data-weight="7500" class="quick-weight px-2.5 py-1 text-xs rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-indigo-500/10 hover:text-indigo-400 text-slate-600 dark:text-slate-300 transition-colors">7.5 кг</button>
+              <button type="button" data-weight="10000" class="quick-weight px-2.5 py-1 text-xs rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-indigo-500/10 hover:text-indigo-400 text-slate-600 dark:text-slate-300 transition-colors">10 кг</button>
+              
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. Результаты расчёта и сравнение -->
+      <div class="space-y-5">
+
+        <!-- Баннер вердикта (Что выгоднее и сколько экономим) -->
+        <section id="verdict-card" class="rounded-2xl p-5 sm:p-6 bg-slate-100/80 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 shadow-sm transition-all">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div id="verdict-badge-wrap" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 mb-2">
+                <span>★</span>
+                <span id="verdict-badge">Ожидание ввода</span>
+              </div>
+              <h2 id="verdict-title" class="text-xl sm:text-2xl font-extrabold tracking-tight">
+                Введите цену и вес товара
+              </h2>
+              <p id="verdict-subtitle" class="text-sm text-slate-600 dark:text-slate-300 mt-1">
+                Укажите стоимость в юанях и примерный вес посылки для сравнения способов доставки
+              </p>
+            </div>
+
+            <!-- Блок экономии в 3 валютах -->
+            <div id="savings-box" class="bg-white/80 dark:bg-slate-950/80 border border-slate-200/80 dark:border-slate-800 rounded-xl p-3.5 sm:text-right shrink-0">
+              <div class="text-[11px] uppercase tracking-wider font-semibold text-slate-400">Чистая выгода</div>
+              <div id="savings-kzt" class="text-xl font-extrabold text-slate-700 dark:text-slate-200">0 ₸</div>
+              <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 space-x-2">
+                <span id="savings-cny">0.00 ¥</span>
+                <span>•</span>
+                <span id="savings-usd">0.00 $</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Порог безубыточности (подсказка по весу) -->
+          <div class="mt-4 pt-3.5 border-t border-slate-200/60 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600 dark:text-slate-400">
+            <span class="flex items-center gap-1.5">
+              <svg class="w-4 h-4 text-amber-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>Порог равенства цен для товара <strong id="breakeven-price-label" class="text-slate-800 dark:text-slate-200">0 ¥</strong>:</span>
+            </span>
+            <span id="breakeven-weight-label" class="font-semibold text-slate-800 dark:text-slate-200 bg-slate-200/60 dark:bg-slate-800 px-2.5 py-1 rounded-lg">
+              Введите цену товара &gt; 0 ¥
+            </span>
+          </div>
+        </section>
+
+        <!-- Две карточки сравнения бок о бок -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          
+          <!-- Карточка 1: Доставка Карго -->
+          <article id="card-cargo" class="relative rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-sm transition-all flex flex-col justify-between">
+            <div>
+              <div class="flex items-start justify-between gap-2 mb-4">
+                <div>
+                  <span class="text-xs font-semibold uppercase tracking-wider text-indigo-500 dark:text-indigo-400">Способ 1</span>
+                  <h3 class="text-lg font-bold mt-0.5">Карго доставка</h3>
+                  <p class="text-xs text-slate-500 dark:text-slate-400">Оплата за вес с округлением</p>
+                </div>
+                <span id="badge-cargo-winner" class="hidden px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500 text-white shadow-sm">
+                  Выгоднее
+                </span>
+              </div>
+
+              <!-- Итоговая цена Карго -->
+              <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 mb-4">
+                <div class="text-xs text-slate-500 dark:text-slate-400">Итоговая стоимость</div>
+                <div id="cargo-total-kzt" class="text-2xl sm:text-3xl font-extrabold tracking-tight mt-0.5">0 ₸</div>
+                <div class="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">
+                  <span id="cargo-total-cny">0.00 ¥</span>
+                  <span>•</span>
+                  <span id="cargo-total-usd">0.00 $</span>
+                </div>
+              </div>
+
+              <!-- Детализация Карго -->
+              <dl class="space-y-2.5 text-sm">
+                <div class="flex justify-between items-center">
+                  <dt class="text-slate-500 dark:text-slate-400">Цена товара:</dt>
+                  <dd id="cargo-item-kzt" class="font-semibold">0 ₸</dd>
+                </div>
+                <div class="flex justify-between items-center">
+                  <dt class="text-slate-500 dark:text-slate-400">Введённый вес:</dt>
+                  <dd id="cargo-raw-weight" class="font-medium text-slate-600 dark:text-slate-300">0 г</dd>
+                </div>
+                <div class="flex justify-between items-center">
+                  <dt class="text-slate-500 dark:text-slate-400">Учётный вес (шаг <span id="cargo-step-label">100</span>г):</dt>
+                  <dd id="cargo-billed-weight" class="font-semibold text-indigo-600 dark:text-indigo-400">0 г (0.00 кг)</dd>
+                </div>
+                <div class="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <dt class="text-slate-500 dark:text-slate-400">Доставка (<span id="cargo-tariff-label">4.09</span> $/кг):</dt>
+                  <dd class="text-right">
+                    <span id="cargo-delivery-kzt" class="font-bold text-slate-800 dark:text-slate-100 block">0 ₸</span>
+                    <span id="cargo-delivery-usd" class="text-[11px] text-slate-400 block">0.00 $</span>
+                  </dd>
+                </div>
+              </dl>
+            </div>
+
+            <button
+              type="button"
+              id="copy-cargo-btn"
+              class="mt-5 w-full py-2.5 px-3 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors flex items-center justify-center gap-1.5"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              Скопировать расчёт Карго
+            </button>
+          </article>
+
+          <!-- Карточка 2: Бесплатная доставка Пиндуодуо + НДС -->
+          <article id="card-direct" class="relative rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-sm transition-all flex flex-col justify-between">
+            <div>
+              <div class="flex items-start justify-between gap-2 mb-4">
+                <div>
+                  <span class="text-xs font-semibold uppercase tracking-wider text-rose-500">Способ 2</span>
+                  <h3 class="text-lg font-bold mt-0.5">Бесплатная доставка</h3>
+                  <p class="text-xs text-slate-500 dark:text-slate-400">Прямая в РК (без веса + НДС)</p>
+                </div>
+                <span id="badge-direct-winner" class="hidden px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500 text-white shadow-sm">
+                  Выгоднее
+                </span>
+              </div>
+
+              <!-- Итоговая цена Прямой доставки -->
+              <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 mb-4">
+                <div class="text-xs text-slate-500 dark:text-slate-400">Итоговая стоимость</div>
+                <div id="direct-total-kzt" class="text-2xl sm:text-3xl font-extrabold tracking-tight mt-0.5">0 ₸</div>
+                <div class="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">
+                  <span id="direct-total-cny">0.00 ¥</span>
+                  <span>•</span>
+                  <span id="direct-total-usd">0.00 $</span>
+                </div>
+              </div>
+
+              <!-- Детализация Прямой доставки -->
+              <dl class="space-y-2.5 text-sm">
+                <div class="flex justify-between items-center">
+                  <dt class="text-slate-500 dark:text-slate-400">Цена товара:</dt>
+                  <dd id="direct-item-kzt" class="font-semibold">0 ₸</dd>
+                </div>
+                <div class="flex justify-between items-center">
+                  <dt class="text-slate-500 dark:text-slate-400">Оплата за вес:</dt>
+                  <dd class="font-semibold text-emerald-600 dark:text-emerald-400">0 ₸ (Бесплатно)</dd>
+                </div>
+                <div class="flex justify-between items-center">
+                  <dt class="text-slate-500 dark:text-slate-400">Ставка налога:</dt>
+                  <dd class="font-medium text-slate-600 dark:text-slate-300">НДС <span id="direct-vat-rate-label">16</span>%</dd>
+                </div>
+                <div class="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <dt class="text-slate-500 dark:text-slate-400">Сумма НДС (<span id="direct-vat-label2">16</span>%):</dt>
+                  <dd class="text-right">
+                    <span id="direct-vat-kzt" class="font-bold text-slate-800 dark:text-slate-100 block">0 ₸</span>
+                    <span id="direct-vat-cny" class="text-[11px] text-slate-400 block">0.00 ¥</span>
+                  </dd>
+                </div>
+              </dl>
+            </div>
+
+            <button
+              type="button"
+              id="copy-direct-btn"
+              class="mt-5 w-full py-2.5 px-3 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors flex items-center justify-center gap-1.5"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              Скопировать расчёт Прямой
+            </button>
+          </article>
+
+        </div>
+      </div>
+
+      <!-- 3. Единый сворачиваемый аккордеон: Дополнительные параметры (Курсы валют + Настройки тарифов) -->
+      <section class="bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
+        <!-- Заголовок-триггер аккордеона -->
+        <button
+          id="advanced-params-toggle"
+          type="button"
+          aria-expanded="false"
+          class="w-full px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors focus:outline-none"
+        >
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 shrink-0">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
+            <div>
+              <div class="text-sm sm:text-base font-semibold">Дополнительные параметры</div>
+              <div class="text-xs text-slate-500 dark:text-slate-400">Курсы валют (CNY / USD), комиссия банка, тариф карго и НДС</div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between sm:justify-end gap-3 pl-12 sm:pl-0">
+            <!-- Краткая сводка текущих курсов в шапке спойлера -->
+            <div id="accordion-rates-summary" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-300">
+              <span>1 ¥ = <strong id="summary-cny-rate" class="text-emerald-600 dark:text-emerald-400">67.20</strong> ₸</span>
+              <span class="text-slate-400">•</span>
+              <span>1 $ = <strong id="summary-usd-rate" class="text-emerald-600 dark:text-emerald-400">485.00</strong> ₸</span>
+            </div>
+
+            <span class="inline-flex items-center gap-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+              <span id="accordion-toggle-label" class="hidden sm:inline">Развернуть</span>
+              <svg id="accordion-chevron" class="w-5 h-5 transition-transform duration-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </span>
+          </div>
+        </button>
+
+        <!-- Скрываемое содержимое аккордеона с плавной анимацией -->
+        <div id="advanced-params-body" class="grid grid-rows-[0fr] transition-[grid-template-rows] duration-300 ease-in-out">
+          <div class="overflow-hidden">
+            <div class="p-5 sm:p-6 pt-2 border-t border-slate-200/80 dark:border-slate-800 grid grid-cols-1 lg:grid-cols-2 gap-6">
+              
+              <!-- Подблок А: Курсы валют (Парсер + Ручной ввод) -->
+              <div class="space-y-3.5">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <h3 class="text-sm font-semibold flex items-center gap-2">
+                    <span class="w-1.5 h-4 rounded-full bg-emerald-500"></span>
+                    Курсы валют (к Тенге)
+                  </h3>
+                  <button
+                    id="refresh-rates-btn"
+                    type="button"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors"
+                    title="Принудительно опросить API и обновить курс"
+                  >
+                    <svg id="refresh-icon" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Обновить курс парсером
+                  </button>
+                </div>
+
+                <!-- Индикатор текущего источника и статуса курса -->
+                <div class="flex flex-col gap-1 py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200/80 dark:border-slate-800">
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="text-[11px] font-medium text-slate-500 dark:text-slate-400">Активный источник:</span>
+                    <span id="rate-priority-badge" class="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                      API парсер
+                    </span>
+                  </div>
+                  <div id="rate-source-info" class="text-xs font-medium text-slate-700 dark:text-slate-200">
+                    Ожидание данных...
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                  <!-- Курс CNY -> KZT -->
+                  <div>
+                    <label for="rate-cny-kzt" class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+                      1 Юань (CNY) → ₸
+                    </label>
+                    <div class="relative">
+                      <input
+                        id="rate-cny-kzt"
+                        type="number"
+                        inputmode="decimal"
+                        step="0.01"
+                        min="0.01"
+                        placeholder="67.20"
+                        class="w-full pl-3 pr-8 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 text-sm font-semibold focus:outline-none focus:border-emerald-500 transition-colors"
+                      />
+                      <span class="absolute inset-y-0 right-0 pr-2.5 flex items-center text-xs text-slate-400">₸</span>
+                    </div>
+                  </div>
+
+                  <!-- Курс USD -> KZT -->
+                  <div>
+                    <label for="rate-usd-kzt" class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+                      1 Доллар (USD) → ₸
+                    </label>
+                    <div class="relative">
+                      <input
+                        id="rate-usd-kzt"
+                        type="number"
+                        inputmode="decimal"
+                        step="0.01"
+                        min="0.01"
+                        placeholder="485.00"
+                        class="w-full pl-3 pr-8 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 text-sm font-semibold focus:outline-none focus:border-emerald-500 transition-colors"
+                      />
+                      <span class="absolute inset-y-0 right-0 pr-2.5 flex items-center text-xs text-slate-400">₸</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Явная кнопка сохранения ручного курса -->
+                <div class="flex items-center justify-between gap-3 pt-0.5">
+                  <span class="text-[11px] text-slate-400 leading-tight">
+                    Сохраняется в приоритете до нажатия «Обновить курс парсером»
+                  </span>
+                  <button
+                    id="save-manual-rate-btn"
+                    type="button"
+                    class="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition-colors"
+                  >
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Сохранить курс
+                  </button>
+                </div>
+
+                <div id="effective-rates-note" class="hidden text-[11px] text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2.5 py-1.5 rounded-lg">
+                  С учётом комиссии банка: <span id="effective-cny-val"></span> ₸/¥ и <span id="effective-usd-val"></span> ₸/$
+                </div>
+              </div>
+
+              <!-- Подблок Б: Настраиваемые параметры тарифов -->
+              <div class="space-y-3.5 flex flex-col justify-between">
+                <div class="space-y-3.5">
+                  <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-semibold flex items-center gap-2">
+                      <span class="w-1.5 h-4 rounded-full bg-indigo-500"></span>
+                      Настройки тарифов и налогов
+                    </h3>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-3">
+                    <!-- Тариф Карго ($ / кг) -->
+                    <div>
+                      <label for="setting-cargo-rate" class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+                        Тариф карго ($/кг)
+                      </label>
+                      <div class="relative">
+                        <input
+                          id="setting-cargo-rate"
+                          type="number"
+                          inputmode="decimal"
+                          step="0.01"
+                          min="0"
+                          value="4.09"
+                          class="w-full pl-3 pr-7 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 text-sm font-semibold focus:outline-none focus:border-indigo-500"
+                        />
+                        <span class="absolute inset-y-0 right-0 pr-2.5 flex items-center text-xs text-slate-400">$</span>
+                      </div>
+                    </div>
+
+                    <!-- Шаг округления веса (г) -->
+                    <div>
+                      <label for="setting-weight-step" class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+                        Шаг округления (г)
+                      </label>
+                      <div class="relative">
+                        <input
+                          id="setting-weight-step"
+                          type="number"
+                          inputmode="numeric"
+                          step="10"
+                          min="1"
+                          value="100"
+                          class="w-full pl-3 pr-7 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 text-sm font-semibold focus:outline-none focus:border-indigo-500"
+                        />
+                        <span class="absolute inset-y-0 right-0 pr-2.5 flex items-center text-xs text-slate-400">г</span>
+                      </div>
+                    </div>
+
+                    <!-- НДС для прямой доставки (%) -->
+                    <div>
+                      <label for="setting-vat-percent" class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+                        НДС (беспл. доставка)
+                      </label>
+                      <div class="relative">
+                        <input
+                          id="setting-vat-percent"
+                          type="number"
+                          inputmode="decimal"
+                          step="0.1"
+                          min="0"
+                          value="16"
+                          class="w-full pl-3 pr-7 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 text-sm font-semibold focus:outline-none focus:border-indigo-500"
+                        />
+                        <span class="absolute inset-y-0 right-0 pr-2.5 flex items-center text-xs text-slate-400">%</span>
+                      </div>
+                    </div>
+
+                    <!-- Наценка банка за конвертацию (%) -->
+                    <div>
+                      <label for="setting-bank-fee" class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1" title="Дополнительный спред банка при конвертации (например, 1.5% - 3%)">
+                        Комиссия банка (%)
+                      </label>
+                      <div class="relative">
+                        <input
+                          id="setting-bank-fee"
+                          type="number"
+                          inputmode="decimal"
+                          step="0.1"
+                          min="0"
+                          value="0"
+                          class="w-full pl-3 pr-7 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 text-sm font-semibold focus:outline-none focus:border-indigo-500"
+                        />
+                        <span class="absolute inset-y-0 right-0 pr-2.5 flex items-center text-xs text-slate-400">%</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Полный сброс кэша и настроек -->
+                <div class="pt-3 border-t border-slate-200/70 dark:border-slate-800/80 flex items-center justify-between gap-2">
+                  <span class="text-[11px] text-slate-400">Очистить хранилище и вернуть $4.09 / 100г / 16%</span>
+                  <button
+                    id="reset-cache-settings-btn"
+                    type="button"
+                    class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 transition-colors"
+                  >
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Сбросить кэш и настройки
+                  </button>
+                </div>
+              </div>
+
+              <!-- Подблок Б: Настраиваемые параметры тарифов -->
+              <div class="space-y-3.5">
+                <div class="flex items-center justify-between">
+                  <h3 class="text-sm font-semibold flex items-center gap-2">
+                    <span class="w-1.5 h-4 rounded-full bg-indigo-500"></span>
+                    Настройки тарифов и налогов
+                  </h3>
+                  <button
+                    id="reset-settings-btn"
+                    type="button"
+                    class="text-xs font-medium text-slate-500 hover:text-rose-500 dark:text-slate-400 dark:hover:text-rose-400 transition-colors"
+                  >
+                    Сбросить по умолчанию
+                  </button>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                  <!-- Тариф Карго ($ / кг) -->
+                  <div>
+                    <label for="setting-cargo-rate" class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+                      Тариф карго ($/кг)
+                    </label>
+                    <div class="relative">
+                      <input
+                        id="setting-cargo-rate"
+                        type="number"
+                        inputmode="decimal"
+                        step="0.01"
+                        min="0"
+                        value="4.09"
+                        class="w-full pl-3 pr-7 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 text-sm font-semibold focus:outline-none focus:border-indigo-500"
+                      />
+                      <span class="absolute inset-y-0 right-0 pr-2.5 flex items-center text-xs text-slate-400">$</span>
+                    </div>
+                  </div>
+
+                  <!-- Шаг округления веса (г) -->
+                  <div>
+                    <label for="setting-weight-step" class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+                      Шаг округления (г)
+                    </label>
+                    <div class="relative">
+                      <input
+                        id="setting-weight-step"
+                        type="number"
+                        inputmode="numeric"
+                        step="10"
+                        min="1"
+                        value="100"
+                        class="w-full pl-3 pr-7 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 text-sm font-semibold focus:outline-none focus:border-indigo-500"
+                      />
+                      <span class="absolute inset-y-0 right-0 pr-2.5 flex items-center text-xs text-slate-400">г</span>
+                    </div>
+                  </div>
+
+                  <!-- НДС для прямой доставки (%) -->
+                  <div>
+                    <label for="setting-vat-percent" class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+                      НДС (беспл. доставка)
+                    </label>
+                    <div class="relative">
+                      <input
+                        id="setting-vat-percent"
+                        type="number"
+                        inputmode="decimal"
+                        step="0.1"
+                        min="0"
+                        value="16"
+                        class="w-full pl-3 pr-7 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 text-sm font-semibold focus:outline-none focus:border-indigo-500"
+                      />
+                      <span class="absolute inset-y-0 right-0 pr-2.5 flex items-center text-xs text-slate-400">%</span>
+                    </div>
+                  </div>
+
+                  <!-- Наценка банка за конвертацию (%) -->
+                  <div>
+                    <label for="setting-bank-fee" class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1" title="Дополнительный спред банка при конвертации (например, 1.5% - 3%)">
+                      Комиссия банка (%)
+                    </label>
+                    <div class="relative">
+                      <input
+                        id="setting-bank-fee"
+                        type="number"
+                        inputmode="decimal"
+                        step="0.1"
+                        min="0"
+                        value="0"
+                        class="w-full pl-3 pr-7 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 text-sm font-semibold focus:outline-none focus:border-indigo-500"
+                      />
+                      <span class="absolute inset-y-0 right-0 pr-2.5 flex items-center text-xs text-slate-400">%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Краткая справка о логике расчёта -->
+      <section class="rounded-2xl bg-slate-100/80 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-800/80 p-4 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+        <div class="font-semibold text-slate-700 dark:text-slate-300 mb-1">Как считается:</div>
+        <ul class="list-disc list-inside space-y-1">
+          <li><strong>Карго:</strong> вес округляется в большую сторону с заданным шагом (например, 124 г → 200 г, 194 г → 200 г) и умножается на тариф в $ за кг.</li>
+          <li><strong>Бесплатная доставка Pinduoduo:</strong> плата за вес не взимается, но к стоимости товара добавляется налог НДС (по умолчанию 16%).</li>
+        </ul>
+      </section>
+
+    </main>
+  </div>
+
+  <script>
+    /**
+     * Единый ключ состояния в localStorage и список устаревших ключей для очистки
+     */
+    const UNIFIED_STORAGE_KEY = 'pdd_calculator_state_v2';
+    const THEME_STORAGE_KEY = 'pdd_calc_theme_v1';
+    const LEGACY_KEYS = [
+      'pdd_calc_settings_v1',
+      'pdd_cached_rates_v1',
+      'pdd_calc_rates_cache_v1'
+    ];
+
+    const DEFAULT_SETTINGS = {
+      cargoRateUsd: 4.09,
+      weightStepGrams: 100,
+      vatPercent: 16,
+      bankFeePercent: 0
+    };
+
+    const FALLBACK_RATES = {
+      cnyToKzt: 67.20,
+      usdToKzt: 485.00
+    };
+
+    // Единое состояние приложения
+    const state = {
+      settings: { ...DEFAULT_SETTINGS },
+      rateData: {
+        cnyToKzt: FALLBACK_RATES.cnyToKzt,
+        usdToKzt: FALLBACK_RATES.usdToKzt,
+        isManual: false, // true = ручной курс (высший приоритет), false = курс от парсера/фоллбэка
+        source: 'Базовый резерв',
+        timestamp: null,
+        statusType: 'loading' // 'manual' | 'online' | 'cache' | 'fallback' | 'loading'
+      }
+    };
+
+    // Ссылки на DOM-элементы
+    const els = {
+      priceInput: document.getElementById('input-price-cny'),
+      weightInput: document.getElementById('input-weight-g'),
+      weightRoundedPill: document.getElementById('weight-rounded-pill'),
+      clearInputsBtn: document.getElementById('clear-inputs-btn'),
+
+      // Аккордеон доп. параметров
+      advancedParamsToggle: document.getElementById('advanced-params-toggle'),
+      advancedParamsBody: document.getElementById('advanced-params-body'),
+      accordionChevron: document.getElementById('accordion-chevron'),
+      accordionToggleLabel: document.getElementById('accordion-toggle-label'),
+      summaryCnyRate: document.getElementById('summary-cny-rate'),
+      summaryUsdRate: document.getElementById('summary-usd-rate'),
+
+      // Курсы
+      rateStatusDot: document.getElementById('rate-status-dot'),
+      rateStatusText: document.getElementById('rate-status-text'),
+      refreshRatesBtn: document.getElementById('refresh-rates-btn'),
+      refreshIcon: document.getElementById('refresh-icon'),
+      saveManualRateBtn: document.getElementById('save-manual-rate-btn'),
+      ratePriorityBadge: document.getElementById('rate-priority-badge'),
+      rateSourceInfo: document.getElementById('rate-source-info'),
+      rateCnyInput: document.getElementById('rate-cny-kzt'),
+      rateUsdInput: document.getElementById('rate-usd-kzt'),
+      effectiveRatesNote: document.getElementById('effective-rates-note'),
+      effectiveCnyVal: document.getElementById('effective-cny-val'),
+      effectiveUsdVal: document.getElementById('effective-usd-val'),
+
+      // Настройки
+      settingCargoRate: document.getElementById('setting-cargo-rate'),
+      settingWeightStep: document.getElementById('setting-weight-step'),
+      settingVatPercent: document.getElementById('setting-vat-percent'),
+      settingBankFee: document.getElementById('setting-bank-fee'),
+      resetCacheSettingsBtn: document.getElementById('reset-cache-settings-btn'),
+
+      // Вердикт
+      verdictCard: document.getElementById('verdict-card'),
+      verdictBadgeWrap: document.getElementById('verdict-badge-wrap'),
+      verdictBadge: document.getElementById('verdict-badge'),
+      verdictTitle: document.getElementById('verdict-title'),
+      verdictSubtitle: document.getElementById('verdict-subtitle'),
+      savingsKzt: document.getElementById('savings-kzt'),
+      savingsCny: document.getElementById('savings-cny'),
+      savingsUsd: document.getElementById('savings-usd'),
+      breakevenPriceLabel: document.getElementById('breakeven-price-label'),
+      breakevenWeightLabel: document.getElementById('breakeven-weight-label'),
+
+      // Карточка Карго
+      cardCargo: document.getElementById('card-cargo'),
+      badgeCargoWinner: document.getElementById('badge-cargo-winner'),
+      cargoTotalKzt: document.getElementById('cargo-total-kzt'),
+      cargoTotalCny: document.getElementById('cargo-total-cny'),
+      cargoTotalUsd: document.getElementById('cargo-total-usd'),
+      cargoItemKzt: document.getElementById('cargo-item-kzt'),
+      cargoRawWeight: document.getElementById('cargo-raw-weight'),
+      cargoStepLabel: document.getElementById('cargo-step-label'),
+      cargoBilledWeight: document.getElementById('cargo-billed-weight'),
+      cargoTariffLabel: document.getElementById('cargo-tariff-label'),
+      cargoDeliveryKzt: document.getElementById('cargo-delivery-kzt'),
+      cargoDeliveryUsd: document.getElementById('cargo-delivery-usd'),
+      copyCargoBtn: document.getElementById('copy-cargo-btn'),
+
+      // Карточка Прямой доставки
+      cardDirect: document.getElementById('card-direct'),
+      badgeDirectWinner: document.getElementById('badge-direct-winner'),
+      directTotalKzt: document.getElementById('direct-total-kzt'),
+      directTotalCny: document.getElementById('direct-total-cny'),
+      directTotalUsd: document.getElementById('direct-total-usd'),
+      directItemKzt: document.getElementById('direct-item-kzt'),
+      directVatRateLabel: document.getElementById('direct-vat-rate-label'),
+      directVatLabel2: document.getElementById('direct-vat-label2'),
+      directVatKzt: document.getElementById('direct-vat-kzt'),
+      directVatCny: document.getElementById('direct-vat-cny'),
+      copyDirectBtn: document.getElementById('copy-direct-btn'),
+
+      // Тема и уведомления
+      themeToggle: document.getElementById('theme-toggle'),
+      toast: document.getElementById('toast'),
+      toastMsg: document.getElementById('toast-msg')
+    };
+
+    /**
+     * Форматирование чисел
+     */
+    function formatKzt(val) {
+      if (!Number.isFinite(val)) return '0 ₸';
+      return Math.round(val).toLocaleString('ru-RU') + ' ₸';
+    }
+
+    function formatDecimal(val, suffix = '') {
+      if (!Number.isFinite(val)) return '0.00' + (suffix ? ' ' + suffix : '');
+      return val.toLocaleString('ru-RU', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }) + (suffix ? ' ' + suffix : '');
+    }
+
+    /**
+     * Форматирование даты и времени в формат ДД.ММ.ГГГГ ЧЧ:ММ
+     */
+    function formatDateTime(ts) {
+      if (!ts) return '';
+      const d = new Date(ts);
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    /**
+     * Показ всплывающего уведомления
+     */
+    let toastTimer = null;
+    function showToast(message) {
+      els.toastMsg.textContent = message;
+      els.toast.classList.remove('translate-y-20', 'opacity-0');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        els.toast.classList.add('translate-y-20', 'opacity-0');
+      }, 3000);
+    }
+
+    /**
+     * Очистка устаревших ключей localStorage во избежание наложения и конфликтов
+     */
+    function cleanupLegacyStorage() {
+      try {
+        LEGACY_KEYS.forEach((key) => localStorage.removeItem(key));
+      } catch (e) {
+        console.warn('Не удалось очистить устаревшие ключи localStorage:', e);
+      }
+    }
+
+    /**
+     * Загрузка единого состояния из localStorage
+     */
+    function loadUnifiedState() {
+      cleanupLegacyStorage();
+      try {
+        const raw = localStorage.getItem(UNIFIED_STORAGE_KEY);
+        if (!raw) return false;
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return false;
+
+        if (parsed.settings) {
+          state.settings = { ...DEFAULT_SETTINGS, ...parsed.settings };
+        }
+
+        if (parsed.rates && parsed.rates.cnyToKzt > 0 && parsed.rates.usdToKzt > 0) {
+          state.rateData = {
+            cnyToKzt: Number(parsed.rates.cnyToKzt),
+            usdToKzt: Number(parsed.rates.usdToKzt),
+            isManual: Boolean(parsed.rates.isManual),
+            source: parsed.rates.source || (parsed.rates.isManual ? 'Ручной ввод' : 'Кэш API'),
+            timestamp: parsed.rates.timestamp || null,
+            statusType: parsed.rates.isManual ? 'manual' : 'cache'
+          };
+          return true;
+        }
+      } catch (e) {
+        console.warn('Ошибка чтения единого хранилища:', e);
+      }
+      return false;
+    }
+
+    /**
+     * Атомарное сохранение единого состояния в localStorage с предварительной очисткой старых ключей
+     */
+    function saveUnifiedState() {
+      cleanupLegacyStorage();
+      try {
+        const payload = {
+          version: 2,
+          settings: { ...state.settings },
+          rates: {
+            cnyToKzt: state.rateData.cnyToKzt,
+            usdToKzt: state.rateData.usdToKzt,
+            isManual: state.rateData.isManual,
+            source: state.rateData.source,
+            timestamp: state.rateData.timestamp
+          }
+        };
+        localStorage.removeItem(UNIFIED_STORAGE_KEY);
+        localStorage.setItem(UNIFIED_STORAGE_KEY, JSON.stringify(payload));
+      } catch (e) {
+        console.warn('Ошибка сохранения единого состояния:', e);
+      }
+    }
+
+    /**
+     * Запрос с таймаутом для отказоустойчивого парсера
+     */
+    async function fetchWithTimeout(url, timeoutMs = 4500) {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const response = await fetch(url, { signal: controller.signal, cache: 'no-store' });
+        clearTimeout(id);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return await response.json();
+      } catch (err) {
+        clearTimeout(id);
+        throw err;
+      }
+    }
+
+    /**
+     * Отказоустойчивый парсер курсов валют (3 независимых API-источника)
+     */
+    async function fetchLiveExchangeRates() {
+      const providers = [
+        {
+          name: 'Open Exchange Rates',
+          url: 'https://open.er-api.com/v6/latest/USD',
+          parse: (data) => {
+            if (!data || !data.rates || !data.rates.KZT || !data.rates.CNY) return null;
+            const usdToKzt = Number(data.rates.KZT);
+            const usdToCny = Number(data.rates.CNY);
+            return {
+              usdToKzt,
+              cnyToKzt: usdToKzt / usdToCny
+            };
+          }
+        },
+        {
+          name: 'Fawaz Currency API (jsDelivr)',
+          url: 'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json',
+          parse: (data) => {
+            if (!data || !data.usd || !data.usd.kzt || !data.usd.cny) return null;
+            const usdToKzt = Number(data.usd.kzt);
+            const usdToCny = Number(data.usd.cny);
+            return {
+              usdToKzt,
+              cnyToKzt: usdToKzt / usdToCny
+            };
+          }
+        },
+        {
+          name: 'Fawaz Currency API (Pages.dev)',
+          url: 'https://latest.currency-api.pages.dev/v1/currencies/usd.json',
+          parse: (data) => {
+            if (!data || !data.usd || !data.usd.kzt || !data.usd.cny) return null;
+            const usdToKzt = Number(data.usd.kzt);
+            const usdToCny = Number(data.usd.cny);
+            return {
+              usdToKzt,
+              cnyToKzt: usdToKzt / usdToCny
+            };
+          }
+        }
+      ];
+
+      for (const provider of providers) {
+        try {
+          const json = await fetchWithTimeout(provider.url, 4500);
+          const parsed = provider.parse(json);
+          if (parsed && parsed.usdToKzt > 0 && parsed.cnyToKzt > 0) {
+            return {
+              usdToKzt: parsed.usdToKzt,
+              cnyToKzt: parsed.cnyToKzt,
+              source: provider.name,
+              timestamp: Date.now()
+            };
+          }
+        } catch (err) {
+          console.warn(`Источник ${provider.name} недоступен:`, err.message);
+        }
+      }
+
+      return null;
+    }
+
+    /**
+     * Обновление курсов через парсер (вызывается либо при первичном запуске без ручного приоритета, либо по кнопке «Обновить курс парсером»)
+     */
+    async function runParserUpdate(isUserButtonClick = false) {
+      els.refreshIcon.classList.add('animate-spin');
+      els.refreshRatesBtn.disabled = true;
+      setRateBadge('loading', 'Запрос к API курсов...');
+
+      const fresh = await fetchLiveExchangeRates();
+
+      els.refreshIcon.classList.remove('animate-spin');
+      els.refreshRatesBtn.disabled = false;
+
+      if (fresh) {
+        // Парсинг успешен: перезаписываем данные в localStorage и снимаем флаг ручного приоритета
+        state.rateData = {
+          cnyToKzt: fresh.cnyToKzt,
+          usdToKzt: fresh.usdToKzt,
+          isManual: false,
+          source: fresh.source,
+          timestamp: fresh.timestamp,
+          statusType: 'online'
+        };
+        saveUnifiedState();
+        syncRatesToUI();
+        if (isUserButtonClick) {
+          showToast('Курс обновлён парсером и сохранён');
+        }
+      } else {
+        // Парсинг не удался: сохраняем и продолжаем использовать предыдущий курс из localStorage (ручной или кэшированный)
+        if (state.rateData.timestamp) {
+          state.rateData.statusType = state.rateData.isManual ? 'manual' : 'cache';
+          syncRatesToUI();
+          showToast('Ошибка сети: сохранён и используется прежний курс');
+        } else {
+          // Если в localStorage вообще не было ни одного курса (первый запуск без интернета)
+          state.rateData = {
+            cnyToKzt: FALLBACK_RATES.cnyToKzt,
+            usdToKzt: FALLBACK_RATES.usdToKzt,
+            isManual: false,
+            source: 'Базовый резерв (нет сети)',
+            timestamp: Date.now(),
+            statusType: 'fallback'
+          };
+          saveUnifiedState();
+          syncRatesToUI();
+          showToast('Серверы курсов недоступны. Введите курс вручную и нажмите «Сохранить курс»');
+        }
+      }
+
+      recalculate();
+    }
+
+    /**
+     * Сохранение ручного курса пользователем (высший приоритет)
+     */
+    function handleSaveManualRate() {
+      const cnyVal = parseFloat(els.rateCnyInput.value);
+      const usdVal = parseFloat(els.rateUsdInput.value);
+
+      if (!Number.isFinite(cnyVal) || cnyVal <= 0 || !Number.isFinite(usdVal) || usdVal <= 0) {
+        showToast('Введите корректные положительные значения курсов');
+        return;
+      }
+
+      state.rateData = {
+        cnyToKzt: cnyVal,
+        usdToKzt: usdVal,
+        isManual: true,
+        source: 'Ручной ввод',
+        timestamp: Date.now(),
+        statusType: 'manual'
+      };
+
+      saveUnifiedState();
+      syncRatesToUI();
+      recalculate();
+      showToast('Ручной курс сохранён и установлен в приоритет');
+    }
+
+    function setRateBadge(type, text) {
+      const dot = els.rateStatusDot;
+      dot.className = 'w-2 h-2 rounded-full shrink-0';
+      if (type === 'online') {
+        dot.classList.add('bg-emerald-500');
+      } else if (type === 'manual') {
+        dot.classList.add('bg-indigo-500');
+      } else if (type === 'cache' || type === 'fallback') {
+        dot.classList.add('bg-amber-500');
+      } else {
+        dot.classList.add('bg-amber-400', 'animate-pulse');
+      }
+      els.rateStatusText.textContent = text;
+    }
+
+    /**
+     * Синхронизация состояния курсов с полями и индикаторами интерфейса
+     */
+    function syncRatesToUI() {
+      els.rateCnyInput.value = Number(state.rateData.cnyToKzt).toFixed(2);
+      els.rateUsdInput.value = Number(state.rateData.usdToKzt).toFixed(2);
+
+      const dtStr = formatDateTime(state.rateData.timestamp);
+
+      if (state.rateData.isManual) {
+        setRateBadge('manual', `Ручной курс (${dtStr})`);
+        els.ratePriorityBadge.className = 'text-[11px] font-semibold px-2 py-0.5 rounded-md bg-indigo-500/15 text-indigo-600 dark:text-indigo-400';
+        els.ratePriorityBadge.textContent = 'Ручной приоритет';
+        els.rateSourceInfo.textContent = `Ручной курс (сохранён ${dtStr}) — приоритет`;
+      } else if (state.rateData.statusType === 'online') {
+        setRateBadge('online', `Курс API (${dtStr})`);
+        els.ratePriorityBadge.className = 'text-[11px] font-semibold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-600 dark:text-emerald-400';
+        els.ratePriorityBadge.textContent = 'API парсер';
+        els.rateSourceInfo.textContent = `Курс API (обновлён ${dtStr}) • ${state.rateData.source}`;
+      } else if (state.rateData.statusType === 'cache') {
+        setRateBadge('cache', `Офлайн-кэш от ${dtStr}`);
+        els.ratePriorityBadge.className = 'text-[11px] font-semibold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400';
+        els.ratePriorityBadge.textContent = 'Кэш API';
+        els.rateSourceInfo.textContent = `Офлайн-кэш от ${dtStr} (${state.rateData.source})`;
+      } else {
+        setRateBadge('fallback', 'Резервный курс');
+        els.ratePriorityBadge.className = 'text-[11px] font-semibold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400';
+        els.ratePriorityBadge.textContent = 'Резерв';
+        els.rateSourceInfo.textContent = `Базовый резерв (${dtStr || 'нет сети'})`;
+      }
+    }
+
+    /**
+     * Получение актуальных эффективных курсов (с учётом текущего значения в полях и комиссии банка)
+     */
+    function getActiveRates() {
+      let baseCny = parseFloat(els.rateCnyInput.value);
+      let baseUsd = parseFloat(els.rateUsdInput.value);
+
+      if (!Number.isFinite(baseCny) || baseCny <= 0) baseCny = state.rateData.cnyToKzt || FALLBACK_RATES.cnyToKzt;
+      if (!Number.isFinite(baseUsd) || baseUsd <= 0) baseUsd = state.rateData.usdToKzt || FALLBACK_RATES.usdToKzt;
+
+      const feeMultiplier = 1 + (Math.max(0, state.settings.bankFeePercent) / 100);
+
+      return {
+        baseCny,
+        baseUsd,
+        effectiveCny: baseCny * feeMultiplier,
+        effectiveUsd: baseUsd * feeMultiplier,
+        hasFee: state.settings.bankFeePercent > 0
+      };
+    }
+
+    /**
+     * Главная функция расчёта и обновления интерфейса
+     */
+    function recalculate() {
+      const priceCny = Math.max(0, parseFloat(els.priceInput.value) || 0);
+      const rawWeightGrams = Math.max(0, parseFloat(els.weightInput.value) || 0);
+
+      const cargoRateUsd = Math.max(0, state.settings.cargoRateUsd);
+      const weightStep = Math.max(1, Math.round(state.settings.weightStepGrams));
+      const vatPercent = Math.max(0, state.settings.vatPercent);
+
+      const rates = getActiveRates();
+
+      // Подсказка эффективного курса, если задана комиссия банка
+      if (rates.hasFee) {
+        els.effectiveRatesNote.classList.remove('hidden');
+        els.effectiveCnyVal.textContent = rates.effectiveCny.toFixed(2);
+        els.effectiveUsdVal.textContent = rates.effectiveUsd.toFixed(2);
+      } else {
+        els.effectiveRatesNote.classList.add('hidden');
+      }
+
+      // Обновляем краткую сводку курсов в заголовке свёрнутого спойлера
+      if (els.summaryCnyRate && els.summaryUsdRate) {
+        els.summaryCnyRate.textContent = rates.effectiveCny.toFixed(2);
+        els.summaryUsdRate.textContent = rates.effectiveUsd.toFixed(2);
+      }
+
+      // 1. Стоимость самого товара в KZT
+      const itemCostKzt = priceCny * rates.effectiveCny;
+
+      // 2. Расчёт КАРГО
+      const billedWeightGrams = rawWeightGrams === 0
+        ? 0
+        : Math.ceil(rawWeightGrams / weightStep) * weightStep;
+
+      const billedWeightKg = billedWeightGrams / 1000;
+      const cargoDeliveryUsd = billedWeightKg * cargoRateUsd;
+      const cargoDeliveryKzt = cargoDeliveryUsd * rates.effectiveUsd;
+      const cargoTotalKzt = itemCostKzt + cargoDeliveryKzt;
+      const cargoTotalCny = cargoTotalKzt / rates.effectiveCny;
+      const cargoTotalUsd = cargoTotalKzt / rates.effectiveUsd;
+
+      // 3. Расчёт БЕСПЛАТНОЙ ДОСТАВКИ (+ НДС)
+      const directVatKzt = itemCostKzt * (vatPercent / 100);
+      const directVatCny = priceCny * (vatPercent / 100);
+      const directTotalKzt = itemCostKzt + directVatKzt;
+      const directTotalCny = directTotalKzt / rates.effectiveCny;
+      const directTotalUsd = directTotalKzt / rates.effectiveUsd;
+
+      // Плашка округлённого веса
+      els.weightRoundedPill.textContent = `Учётный вес: ${billedWeightGrams} г`;
+
+      // Карточка Карго
+      els.cargoTotalKzt.textContent = formatKzt(cargoTotalKzt);
+      els.cargoTotalCny.textContent = formatDecimal(cargoTotalCny, '¥');
+      els.cargoTotalUsd.textContent = formatDecimal(cargoTotalUsd, '$');
+      els.cargoItemKzt.textContent = formatKzt(itemCostKzt);
+      els.cargoRawWeight.textContent = `${rawWeightGrams} г`;
+      els.cargoStepLabel.textContent = weightStep;
+      els.cargoBilledWeight.textContent = `${billedWeightGrams} г (${billedWeightKg.toFixed(2)} кг)`;
+      els.cargoTariffLabel.textContent = cargoRateUsd.toFixed(2);
+      els.cargoDeliveryKzt.textContent = formatKzt(cargoDeliveryKzt);
+      els.cargoDeliveryUsd.textContent = formatDecimal(cargoDeliveryUsd, '$');
+
+      // Карточка Прямой доставки
+      els.directTotalKzt.textContent = formatKzt(directTotalKzt);
+      els.directTotalCny.textContent = formatDecimal(directTotalCny, '¥');
+      els.directTotalUsd.textContent = formatDecimal(directTotalUsd, '$');
+      els.directItemKzt.textContent = formatKzt(itemCostKzt);
+      els.directVatRateLabel.textContent = vatPercent;
+      els.directVatLabel2.textContent = vatPercent;
+      els.directVatKzt.textContent = formatKzt(directVatKzt);
+      els.directVatCny.textContent = formatDecimal(directVatCny, '¥');
+
+      // Разница и выгода
+      const diffKzt = Math.abs(cargoTotalKzt - directTotalKzt);
+      const diffCny = diffKzt / rates.effectiveCny;
+      const diffUsd = diffKzt / rates.effectiveUsd;
+
+      els.savingsKzt.textContent = formatKzt(diffKzt);
+      els.savingsCny.textContent = formatDecimal(diffCny, '¥');
+      els.savingsUsd.textContent = formatDecimal(diffUsd, '$');
+
+      // Расчёт порога веса безубыточности
+      els.breakevenPriceLabel.textContent = `${priceCny} ¥`;
+      if (priceCny > 0 && cargoRateUsd > 0 && vatPercent > 0) {
+        const breakevenKg = directVatKzt / (cargoRateUsd * rates.effectiveUsd);
+        const breakevenGrams = Math.floor(breakevenKg * 1000);
+        els.breakevenWeightLabel.textContent = `Карго выгоднее до ~${breakevenGrams} г (${breakevenKg.toFixed(2)} кг)`;
+      } else if (priceCny === 0) {
+        els.breakevenWeightLabel.textContent = 'Введите цену товара > 0 ¥';
+      } else {
+        els.breakevenWeightLabel.textContent = 'Зависит от ставки НДС и тарифа';
+      }
+
+      // Визуальное выделение победителя (или состояние ожидания)
+      const isIdle = priceCny === 0 && rawWeightGrams === 0;
+
+      if (isIdle) {
+        els.verdictCard.className = 'rounded-2xl p-5 sm:p-6 bg-slate-100/80 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 shadow-sm transition-all';
+        els.verdictBadgeWrap.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 mb-2';
+        els.verdictBadge.textContent = 'Ожидание ввода';
+        els.verdictTitle.textContent = 'Введите цену и вес товара';
+        els.verdictSubtitle.textContent = 'Укажите стоимость в юанях и примерный вес посылки для сравнения способов доставки';
+        els.savingsKzt.className = 'text-xl font-extrabold text-slate-700 dark:text-slate-200';
+
+        els.cardCargo.classList.remove('border-2', 'border-emerald-500', 'shadow-md');
+        els.cardCargo.classList.add('border', 'border-slate-200', 'dark:border-slate-800');
+        els.badgeCargoWinner.classList.add('hidden');
+
+        els.cardDirect.classList.remove('border-2', 'border-emerald-500', 'shadow-md');
+        els.cardDirect.classList.add('border', 'border-slate-200', 'dark:border-slate-800');
+        els.badgeDirectWinner.classList.add('hidden');
+      } else if (Math.round(cargoTotalKzt) < Math.round(directTotalKzt)) {
+        els.verdictCard.className = 'rounded-2xl p-5 sm:p-6 bg-gradient-to-br from-emerald-500/15 via-teal-500/10 to-slate-900/40 border border-emerald-500/30 shadow-sm transition-all';
+        els.verdictBadgeWrap.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 mb-2';
+        els.verdictBadge.textContent = 'Рекомендация';
+        els.verdictTitle.textContent = 'Выгоднее: Карго доставка';
+        els.verdictSubtitle.innerHTML = `Карго дешевле прямой доставки с НДС на <strong class="text-emerald-600 dark:text-emerald-400">${formatKzt(diffKzt)}</strong>`;
+        els.savingsKzt.className = 'text-xl font-extrabold text-emerald-600 dark:text-emerald-400';
+
+        els.cardCargo.classList.add('border-2', 'border-emerald-500', 'shadow-md');
+        els.cardCargo.classList.remove('border', 'border-slate-200', 'dark:border-slate-800');
+        els.badgeCargoWinner.classList.remove('hidden');
+
+        els.cardDirect.classList.remove('border-2', 'border-emerald-500', 'shadow-md');
+        els.cardDirect.classList.add('border', 'border-slate-200', 'dark:border-slate-800');
+        els.badgeDirectWinner.classList.add('hidden');
+      } else if (Math.round(directTotalKzt) < Math.round(cargoTotalKzt)) {
+        els.verdictCard.className = 'rounded-2xl p-5 sm:p-6 bg-gradient-to-br from-emerald-500/15 via-teal-500/10 to-slate-900/40 border border-emerald-500/30 shadow-sm transition-all';
+        els.verdictBadgeWrap.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 mb-2';
+        els.verdictBadge.textContent = 'Рекомендация';
+        els.verdictTitle.textContent = 'Выгоднее: Бесплатная доставка (+НДС)';
+        els.verdictSubtitle.innerHTML = `Прямая доставка с НДС ${vatPercent}% дешевле карго на <strong class="text-emerald-600 dark:text-emerald-400">${formatKzt(diffKzt)}</strong>`;
+        els.savingsKzt.className = 'text-xl font-extrabold text-emerald-600 dark:text-emerald-400';
+
+        els.cardDirect.classList.add('border-2', 'border-emerald-500', 'shadow-md');
+        els.cardDirect.classList.remove('border', 'border-slate-200', 'dark:border-slate-800');
+        els.badgeDirectWinner.classList.remove('hidden');
+
+        els.cardCargo.classList.remove('border-2', 'border-emerald-500', 'shadow-md');
+        els.cardCargo.classList.add('border', 'border-slate-200', 'dark:border-slate-800');
+        els.badgeCargoWinner.classList.add('hidden');
+      } else {
+        els.verdictCard.className = 'rounded-2xl p-5 sm:p-6 bg-slate-100/80 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 shadow-sm transition-all';
+        els.verdictBadgeWrap.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 mb-2';
+        els.verdictBadge.textContent = 'Паритет';
+        els.verdictTitle.textContent = 'Стоимость обоих вариантов одинакова';
+        els.verdictSubtitle.textContent = 'Разница между способами доставки отсутствует';
+        els.savingsKzt.className = 'text-xl font-extrabold text-slate-700 dark:text-slate-200';
+
+        els.cardCargo.classList.remove('border-2', 'border-emerald-500', 'shadow-md');
+        els.cardCargo.classList.add('border', 'border-slate-200', 'dark:border-slate-800');
+        els.badgeCargoWinner.classList.add('hidden');
+
+        els.cardDirect.classList.remove('border-2', 'border-emerald-500', 'shadow-md');
+        els.cardDirect.classList.add('border', 'border-slate-200', 'dark:border-slate-800');
+        els.badgeDirectWinner.classList.add('hidden');
+      }
+    }
+
+    /**
+     * Заполнение полей настроек из state
+     */
+    function applySettingsToUI() {
+      els.settingCargoRate.value = state.settings.cargoRateUsd;
+      els.settingWeightStep.value = state.settings.weightStepGrams;
+      els.settingVatPercent.value = state.settings.vatPercent;
+      els.settingBankFee.value = state.settings.bankFeePercent;
+      syncRatesToUI();
+    }
+
+    /**
+     * Полный сброс кэша и настроек до заводских значений + запуск свежего парсинга
+     */
+    async function handleResetCacheAndSettings() {
+      try {
+        cleanupLegacyStorage();
+        localStorage.removeItem(UNIFIED_STORAGE_KEY);
+      } catch (e) {
+        console.warn('Ошибка очистки localStorage:', e);
+      }
+
+      state.settings = { ...DEFAULT_SETTINGS };
+      state.rateData = {
+        cnyToKzt: FALLBACK_RATES.cnyToKzt,
+        usdToKzt: FALLBACK_RATES.usdToKzt,
+        isManual: false,
+        source: 'Ожидание парсера',
+        timestamp: null,
+        statusType: 'loading'
+      };
+
+      applySettingsToUI();
+      recalculate();
+      showToast('Кэш очищен, настройки сброшены. Обновляем курс...');
+      await runParserUpdate(false);
+    }
+
+    /**
+     * Копирование текста в буфер обмена
+     */
+    function copyToClipboard(text) {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        showToast('Расчёт скопирован в буфер обмена');
+      } catch (err) {
+        showToast('Не удалось скопировать текст');
+      }
+      document.body.removeChild(textarea);
+    }
+
+    /**
+     * Инициализация темы (Dark / Light)
+     */
+    function initTheme() {
+      const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+      if (savedTheme === 'light') {
+        document.documentElement.classList.remove('dark');
+      } else {
+        document.documentElement.classList.add('dark');
+      }
+
+      els.themeToggle.addEventListener('click', () => {
+        const isDark = document.documentElement.classList.toggle('dark');
+        localStorage.setItem(THEME_STORAGE_KEY, isDark ? 'dark' : 'light');
+      });
+    }
+
+    /**
+     * Навешивание обработчиков событий
+     */
+    function bindEvents() {
+      // Переключение аккордеона «Дополнительные параметры»
+      els.advancedParamsToggle.addEventListener('click', () => {
+        const isExpanded = els.advancedParamsToggle.getAttribute('aria-expanded') === 'true';
+        const nextState = !isExpanded;
+        els.advancedParamsToggle.setAttribute('aria-expanded', String(nextState));
+
+        if (nextState) {
+          els.advancedParamsBody.classList.remove('grid-rows-[0fr]');
+          els.advancedParamsBody.classList.add('grid-rows-[1fr]');
+          els.accordionChevron.classList.add('rotate-180');
+          els.accordionToggleLabel.textContent = 'Свернуть';
+        } else {
+          els.advancedParamsBody.classList.remove('grid-rows-[1fr]');
+          els.advancedParamsBody.classList.add('grid-rows-[0fr]');
+          els.accordionChevron.classList.remove('rotate-180');
+          els.accordionToggleLabel.textContent = 'Развернуть';
+        }
+      });
+
+      // Основные поля ввода товара
+      els.priceInput.addEventListener('input', recalculate);
+      els.weightInput.addEventListener('input', recalculate);
+
+      els.clearInputsBtn.addEventListener('click', () => {
+        els.priceInput.value = '';
+        els.weightInput.value = '';
+        recalculate();
+        els.priceInput.focus();
+      });
+
+      // Пресеты цены и веса
+      document.querySelectorAll('.quick-price').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          els.priceInput.value = btn.dataset.price;
+          recalculate();
+        });
+      });
+
+      document.querySelectorAll('.quick-weight').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          els.weightInput.value = btn.dataset.weight;
+          recalculate();
+        });
+      });
+
+      // Предпросмотр расчётов при наборе в полях курсов (без перезаписи приоритета до нажатия «Сохранить курс»)
+      els.rateCnyInput.addEventListener('input', recalculate);
+      els.rateUsdInput.addEventListener('input', recalculate);
+
+      // Явное сохранение ручного курса в localStorage с установкой приоритета
+      els.saveManualRateBtn.addEventListener('click', handleSaveManualRate);
+
+      // Принудительное обновление курса парсером по клику пользователя
+      els.refreshRatesBtn.addEventListener('click', () => {
+        runParserUpdate(true);
+      });
+
+      // Настройки тарифов
+      els.settingCargoRate.addEventListener('input', () => {
+        const val = parseFloat(els.settingCargoRate.value);
+        state.settings.cargoRateUsd = Number.isFinite(val) && val >= 0 ? val : 0;
+        saveUnifiedState();
+        recalculate();
+      });
+
+      els.settingWeightStep.addEventListener('input', () => {
+        const val = parseInt(els.settingWeightStep.value, 10);
+        state.settings.weightStepGrams = Number.isFinite(val) && val >= 1 ? val : 100;
+        saveUnifiedState();
+        recalculate();
+      });
+
+      els.settingVatPercent.addEventListener('input', () => {
+        const val = parseFloat(els.settingVatPercent.value);
+        state.settings.vatPercent = Number.isFinite(val) && val >= 0 ? val : 0;
+        saveUnifiedState();
+        recalculate();
+      });
+
+      els.settingBankFee.addEventListener('input', () => {
+        const val = parseFloat(els.settingBankFee.value);
+        state.settings.bankFeePercent = Number.isFinite(val) && val >= 0 ? val : 0;
+        saveUnifiedState();
+        recalculate();
+      });
+
+      // Полный сброс кэша и настроек
+      els.resetCacheSettingsBtn.addEventListener('click', handleResetCacheAndSettings);
+
+      // Кнопки копирования итогов
+      els.copyCargoBtn.addEventListener('click', () => {
+        const text = [
+          `📦 Pinduoduo — Расчёт Карго:`,
+          `• Товар: ${els.priceInput.value || 0} ¥ (${els.cargoItemKzt.textContent})`,
+          `• Вес: ${els.cargoRawWeight.textContent} → учётный ${els.cargoBilledWeight.textContent}`,
+          `• Доставка (${els.cargoTariffLabel.textContent} $/кг): ${els.cargoDeliveryKzt.textContent} (${els.cargoDeliveryUsd.textContent})`,
+          `• ИТОГО: ${els.cargoTotalKzt.textContent} (${els.cargoTotalCny.textContent} / ${els.cargoTotalUsd.textContent})`
+        ].join('\n');
+        copyToClipboard(text);
+      });
+
+      els.copyDirectBtn.addEventListener('click', () => {
+        const text = [
+          `✈️ Pinduoduo — Бесплатная доставка (+НДС):`,
+          `• Товар: ${els.priceInput.value || 0} ¥ (${els.directItemKzt.textContent})`,
+          `• Доставка: 0 ₸ (Бесплатно)`,
+          `• НДС (${els.directVatRateLabel.textContent}%): ${els.directVatKzt.textContent} (${els.directVatCny.textContent})`,
+          `• ИТОГО: ${els.directTotalKzt.textContent} (${els.directTotalCny.textContent} / ${els.directTotalUsd.textContent})`
+        ].join('\n');
+        copyToClipboard(text);
+      });
+    }
+
+    /**
+     * Запуск приложения со строгим соблюдением приоритетов localStorage
+     */
+    window.addEventListener('DOMContentLoaded', () => {
+      initTheme();
+      bindEvents();
+
+      const hasStoredRates = loadUnifiedState();
+      applySettingsToUI();
+      recalculate();
+
+      if (hasStoredRates && state.rateData.isManual) {
+        // Приоритет 1: Пользователь сохранил ручной курс -> НЕ запускаем парсер автоматически при открытии
+        syncRatesToUI();
+        recalculate();
+      } else {
+        // Приоритет 2: Ручного курса нет -> сразу показываем кэш (если был), а затем опрашиваем парсер
+        if (hasStoredRates) {
+          syncRatesToUI();
+        }
+        runParserUpdate(false);
+      }
+    });
+  </script>
+</body>
+</html>
